@@ -48,14 +48,20 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class EpisodeRepository @Inject constructor(private val episodeDao: EpisodeDao, private val episodeRDS: EpisodeRemoteDataSource,
-  private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default) {
+class EpisodeRepository @Inject constructor(
+  private val episodeDao: EpisodeDao, private val episodeRDS: EpisodeRemoteDataSource,
+  private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
+) {
 
-  val episodesFlow : Flow<List<Episode>>
-  get() = episodeDao.loadAllEpisodesFlow()
-    .flowOn(defaultDispatcher)
-  //Add conflate to only receive the latest results
-    .conflate()
+  val episodesFlow: Flow<List<Episode>>
+    get() = episodeDao.loadAllEpisodesFlow()
+      .flowOn(defaultDispatcher)
+      //Add conflate to only receive the latest results
+      .conflate()
+
+  fun getEpisodesForTrilogyFlow(trilogy: Trilogy): Flow<List<Episode>> {
+    return episodeDao.getEpisodesForTrilogyNumberFlow(trilogyNumber = trilogy.number)
+  }
 
   private fun shouldUpdateEpisodesCache(): Boolean {
     return true
