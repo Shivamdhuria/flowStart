@@ -40,9 +40,7 @@ import com.raywenderlich.android.episodes.model.network.EpisodeRemoteDataSource
 import com.raywenderlich.android.episodes.utils.ComparablePair
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.conflate
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -53,14 +51,30 @@ class EpisodeRepository @Inject constructor(
   private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
 
+  private var favSortOrder: List<String> = listOf()
+
+  private val favFlow = flow {
+
+    favSortOrder = episodeRDS.favoritesSortOrder()
+    emit(favSortOrder)
+  }
   val episodesFlow: Flow<List<Episode>>
     get() = episodeDao.loadAllEpisodesFlow()
+
+      //combine with fav flow
+      .combine(favFlow) { episiodes, favoritesOrder ->
+        episiodes.applySort(favSortOrder)
+      }
+
       .flowOn(defaultDispatcher)
       //Add conflate to only receive the latest results
       .conflate()
 
   fun getEpisodesForTrilogyFlow(trilogy: Trilogy): Flow<List<Episode>> {
     return episodeDao.getEpisodesForTrilogyNumberFlow(trilogyNumber = trilogy.number)
+      .map { episodesList ->
+         episodesList.applyMainSafeSort(favSortOrder)
+      }
   }
 
   private fun shouldUpdateEpisodesCache(): Boolean {
